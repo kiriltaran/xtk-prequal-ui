@@ -19,19 +19,19 @@
           @click="activeTab = 'registered-lap-time'"
           :class="getTabClass('registered-lap-time')"
         >
-          Зареєстровані з часом кола
+          Зареєстровані
         </button>
         <button
           @click="activeTab = 'registered-no-lap-time'"
           :class="getTabClass('registered-no-lap-time')"
         >
-          Зареєстровані без часу кола
+          Зареєстровані, не пройшли кваліфікацію
         </button>
         <button
           @click="activeTab = 'lap-time-no-registered'"
           :class="getTabClass('lap-time-no-registered')"
         >
-          Час кола встановлено без реєстрації
+          Встановили час без реєстрації
         </button>
       </div>
 
@@ -265,6 +265,7 @@
 
       const API_URL = "https://acc-prequal-backend.fly.dev/event/list";
       const UNSET_LAP_TIME = 999999;
+      const MINIMAL_LAP_TIME_LIMIT = 126000;
 
       createApp({
         setup() {
@@ -292,7 +293,7 @@
             return list.sort((a, b) => a.bestAverage - b.bestAverage);
           };
 
-          // Format time from milliseconds to m:ss:SS
+          // Format time from milliseconds to m:ss:ms
           const formatTime = (ms) => {
             if (ms === UNSET_LAP_TIME) return "-";
             const minutes = Math.floor(ms / 60000);
@@ -307,14 +308,14 @@
           const sortedRegisteredLapTime = computed(() => {
             return sortParticipants(
               participants.value.filter(
-                (p) => p.registered && p.bestAverage !== UNSET_LAP_TIME
+                (p) => p.registered && p.bestAverage <= MINIMAL_LAP_TIME_LIMIT
               )
             );
           });
 
           const registeredNoLapTime = computed(() => {
             return participants.value.filter(
-              (p) => p.registered && p.bestAverage === UNSET_LAP_TIME
+              (p) => p.registered && p.bestAverage > MINIMAL_LAP_TIME_LIMIT
             );
           });
 
