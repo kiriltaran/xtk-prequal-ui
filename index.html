@@ -6,6 +6,69 @@
     <title>Прекваліфікація Khutko FBS Cup</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <style>
+      :root {
+        --warning: #facc15;
+        --success: #22c55e;
+      }
+
+      .lap {
+        position: relative;
+      }
+
+      .lap--best-range {
+        color: var(--success);
+      }
+
+      .lap--best-range.lap--best-range-invalid {
+        color: var(--warning);
+      }
+
+      .lap--best-range::after {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        right: 0;
+        border: 2px solid var(--success);
+        border-left-color: transparent;
+        border-top-color: transparent;
+        border-bottom-color: transparent;
+        width: 20px;
+        height: 100%;
+      }
+
+      .lap--best-range.lap--best-range-invalid::after {
+        border: 2px solid var(--warning);
+        border-left-color: transparent;
+        border-top-color: transparent;
+        border-bottom-color: transparent;
+      }
+
+      .lap--best-range-start::after {
+        border-top-color: var(--success);
+        top: 5px;
+      }
+
+      .lap--best-range-start.lap--best-range-invalid::after {
+        border-top-color: var(--warning);
+      }
+
+      .lap--best-range-finish::after {
+        bottom: 5px;
+        border-bottom-color: var(--success);
+      }
+
+      .lap--best-range-finish.lap--best-range-invalid::after {
+        border-bottom-color: var(--warning);
+      }
+
+      @media (max-width: 640px) {
+        .lap--best-range::after {
+          display: none;
+        }
+      }
+    </style>
   </head>
   <body class="bg-gray-900 text-white p-6 dark">
     <div id="app" class="container mx-auto max-w-4xl">
@@ -80,37 +143,48 @@
                     <p v-if="participant.attempts.length === 0">
                       Спроби відсутні
                     </p>
-                    <div
-                      v-else
-                      v-for="attempt in participant.attempts"
-                      :key="attempt.carModel"
-                      class="mt-2"
-                    >
-                      <table class="min-w-full table-auto text-gray-300 mt-2">
-                        <thead>
-                          <tr class="bg-gray-800">
-                            <th class="py-2 px-4 text-left">Сектор 1</th>
-                            <th class="py-2 px-4 text-left">Сектор 2</th>
-                            <th class="py-2 px-4 text-left">Сектор 3</th>
-                            <th class="py-2 px-4 text-left">Зрізка</th>
-                            <th class="py-2 px-4 text-left">Час кола</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="lap in attempt.laps" :key="lap.lapTimeMS">
-                            <td class="py-2 px-4">{{ lap.s1 }}</td>
-                            <td class="py-2 px-4">{{ lap.s2 }}</td>
-                            <td class="py-2 px-4">{{ lap.s3 }}</td>
-                            <td class="py-2 px-4">
-                              {{ lap.hasCute ? 'Так' : 'Ні' }}
-                            </td>
-                            <td class="py-2 px-4">
-                              {{ formatTime(lap.lapTimeMS) }}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    <template v-else>
+                      <div
+                        v-for="attempt in participant.attempts"
+                        :key="attempt.carModel"
+                        class="mt-2"
+                      >
+                        <table class="min-w-full table-auto text-gray-300 mt-2">
+                          <thead>
+                            <tr class="bg-gray-800">
+                              <th class="py-2 px-4 text-center">Сектор 1</th>
+                              <th class="py-2 px-4 text-center">Сектор 2</th>
+                              <th class="py-2 px-4 text-center">Сектор 3</th>
+                              <th class="py-2 px-4 text-center">Зрізка</th>
+                              <th class="py-2 px-4 text-center">Час кола</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr
+                              v-for="(lap, lapIndex) in attempt.laps"
+                              :key="lap.lapTimeMS"
+                              :class="getLapClass(lapIndex, attempt, participant)"
+                            >
+                              <td class="py-2 px-4 text-center">
+                                {{ lap.s1 }}
+                              </td>
+                              <td class="py-2 px-4 text-center">
+                                {{ lap.s2 }}
+                              </td>
+                              <td class="py-2 px-4 text-center">
+                                {{ lap.s3 }}
+                              </td>
+                              <td class="py-2 px-4 text-center">
+                                {{ lap.hasCute ? 'Так' : 'Ні' }}
+                              </td>
+                              <td class="py-2 px-4 text-center">
+                                {{ formatTime(lap.lapTimeMS) }}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </template>
                   </td>
                 </tr>
               </template>
@@ -155,22 +229,26 @@
                       <table class="min-w-full table-auto text-gray-300 mt-2">
                         <thead>
                           <tr class="bg-gray-800">
-                            <th class="py-2 px-4 text-left">Сектор 1</th>
-                            <th class="py-2 px-4 text-left">Сектор 2</th>
-                            <th class="py-2 px-4 text-left">Сектор 3</th>
-                            <th class="py-2 px-4 text-left">Зрізка</th>
-                            <th class="py-2 px-4 text-left">Час кола</th>
+                            <th class="py-2 px-4 text-center">Сектор 1</th>
+                            <th class="py-2 px-4 text-center">Сектор 2</th>
+                            <th class="py-2 px-4 text-center">Сектор 3</th>
+                            <th class="py-2 px-4 text-center">Зрізка</th>
+                            <th class="py-2 px-4 text-center">Час кола</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="lap in attempt.laps" :key="lap.lapTimeMS">
-                            <td class="py-2 px-4">{{ lap.s1 }}</td>
-                            <td class="py-2 px-4">{{ lap.s2 }}</td>
-                            <td class="py-2 px-4">{{ lap.s3 }}</td>
-                            <td class="py-2 px-4">
+                          <tr
+                            v-for="(lap, lapIndex) in attempt.laps"
+                            :key="lap.lapTimeMS"
+                            :class="getLapClass(lapIndex, attempt, participant)"
+                          >
+                            <td class="py-2 px-4 text-center">{{ lap.s1 }}</td>
+                            <td class="py-2 px-4 text-center">{{ lap.s2 }}</td>
+                            <td class="py-2 px-4 text-center">{{ lap.s3 }}</td>
+                            <td class="py-2 px-4 text-center">
                               {{ lap.hasCute ? 'Так' : 'Ні' }}
                             </td>
-                            <td class="py-2 px-4">
+                            <td class="py-2 px-4 text-center">
                               {{ formatTime(lap.lapTimeMS) }}
                             </td>
                           </tr>
@@ -225,15 +303,19 @@
                       <table class="min-w-full table-auto text-gray-300 mt-2">
                         <thead>
                           <tr class="bg-gray-800">
-                            <th class="py-2 px-4 text-left">Сектор 1</th>
-                            <th class="py-2 px-4 text-left">Сектор 2</th>
-                            <th class="py-2 px-4 text-left">Сектор 3</th>
-                            <th class="py-2 px-4 text-left">Зрізка</th>
-                            <th class="py-2 px-4 text-left">Час кола</th>
+                            <th class="py-2 px-4 text-center">Сектор 1</th>
+                            <th class="py-2 px-4 text-center">Сектор 2</th>
+                            <th class="py-2 px-4 text-center">Сектор 3</th>
+                            <th class="py-2 px-4 text-center">Зрізка</th>
+                            <th class="py-2 px-4 text-center">Час кола</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="lap in attempt.laps" :key="lap.lapTimeMS">
+                          <tr
+                            v-for="(lap, lapIndex) in attempt.laps"
+                            :key="lap.lapTimeMS"
+                            :class="getLapClass(lapIndex, attempt, participant)"
+                          >
                             <td class="py-2 px-4">{{ lap.s1 }}</td>
                             <td class="py-2 px-4">{{ lap.s2 }}</td>
                             <td class="py-2 px-4">{{ lap.s3 }}</td>
@@ -333,6 +415,33 @@
               expandedParticipant.value === id ? null : id;
           };
 
+          // Find participant best 7-lap chain
+          const findAttemptSuccessfulRange = (attempt, participant) => {
+            if (!attempt.laps || attempt.laps.length < 7) {
+              return [];
+            }
+
+            const targetAverage = participant.bestAverage;
+            let bestStartIndex = -1;
+
+            for (let i = 0; i <= attempt.laps.length - 7; i++) {
+              const chain = attempt.laps.slice(i, i + 7);
+              const average =
+                chain.reduce((sum, lap) => sum + lap.lapTimeMS, 0) / 7;
+
+              if (Math.floor(average) === targetAverage) {
+                bestStartIndex = i;
+                break;
+              }
+            }
+
+            if (bestStartIndex === -1) {
+              return [];
+            }
+
+            return [bestStartIndex, bestStartIndex + 6];
+          };
+
           // Start countdown and refresh
           const startCooldown = () => {
             setInterval(async () => {
@@ -355,6 +464,26 @@
             ];
           };
 
+          // Calculate dynamic lap class
+          const getLapClass = (lapIndex, attempt, participant) => {
+            const [start, finish] = findAttemptSuccessfulRange(
+              attempt,
+              participant
+            );
+            const isInRange = lapIndex >= start && lapIndex <= finish;
+
+            return [
+              "lap",
+              {
+                "lap--best-range": isInRange,
+                "lap--best-range-start": lapIndex === start,
+                "lap--best-range-finish": lapIndex === finish,
+                "lap--best-range-invalid":
+                  isInRange && participant.bestAverage > MINIMAL_LAP_TIME_LIMIT,
+              },
+            ];
+          };
+
           // Initialize
           onMounted(() => {
             fetchParticipants();
@@ -373,6 +502,8 @@
             formatTime,
             getTabClass,
             toggleDetails,
+            findAttemptSuccessfulRange,
+            getLapClass,
           };
         },
       }).mount("#app");
