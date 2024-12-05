@@ -136,7 +136,7 @@
             </thead>
             <tbody>
               <template
-                v-for="(participant, index) in registeredPassedParticipants"
+                v-for="(participant, index) in registeredPassedParticipantsFilterByClass"
                 :key="participant.id"
               >
                 <tr
@@ -178,7 +178,7 @@
                               <th class="py-2 px-4 text-center">Сектор 1</th>
                               <th class="py-2 px-4 text-center">Сектор 2</th>
                               <th class="py-2 px-4 text-center">Сектор 3</th>
-                              <th class="py-2 px-4 text-center">Зрізка</th>
+                              <th class="py-2 px-4 text-center">Валідне</th>
                               <th class="py-2 px-4 text-center">Час кола</th>
                             </tr>
                           </thead>
@@ -198,7 +198,7 @@
                                 {{ lap.s3 }}
                               </td>
                               <td class="py-2 px-4 text-center">
-                                {{ lap.hasCute ? 'Так' : 'Ні' }}
+                                {{ isValidLap(lap) ? 'Так' : 'Ні' }}
                               </td>
                               <td class="py-2 px-4 text-center">
                                 {{ formatTime(lap.lapTimeMS) }}
@@ -261,7 +261,7 @@
                             <th class="py-2 px-4 text-center">Сектор 1</th>
                             <th class="py-2 px-4 text-center">Сектор 2</th>
                             <th class="py-2 px-4 text-center">Сектор 3</th>
-                            <th class="py-2 px-4 text-center">Зрізка</th>
+                            <th class="py-2 px-4 text-center">Валідне</th>
                             <th class="py-2 px-4 text-center">Час кола</th>
                           </tr>
                         </thead>
@@ -275,7 +275,7 @@
                             <td class="py-2 px-4 text-center">{{ lap.s2 }}</td>
                             <td class="py-2 px-4 text-center">{{ lap.s3 }}</td>
                             <td class="py-2 px-4 text-center">
-                              {{ lap.hasCute ? 'Так' : 'Ні' }}
+                              {{ isValidLap(lap) ? 'Так' : 'Ні' }}
                             </td>
                             <td class="py-2 px-4 text-center">
                               {{ formatTime(lap.lapTimeMS) }}
@@ -335,7 +335,7 @@
                             <th class="py-2 px-4 text-center">Сектор 1</th>
                             <th class="py-2 px-4 text-center">Сектор 2</th>
                             <th class="py-2 px-4 text-center">Сектор 3</th>
-                            <th class="py-2 px-4 text-center">Зрізка</th>
+                            <th class="py-2 px-4 text-center">Валідне</th>
                             <th class="py-2 px-4 text-center">Час кола</th>
                           </tr>
                         </thead>
@@ -349,7 +349,7 @@
                             <td class="py-2 px-4 text-center">{{ lap.s2 }}</td>
                             <td class="py-2 px-4 text-center">{{ lap.s3 }}</td>
                             <td class="py-2 px-4 text-center">
-                              {{ lap.hasCute ? 'Так' : 'Ні' }}
+                              {{ isValidLap(lap) ? 'Так' : 'Ні' }}
                             </td>
                             <td class="py-2 px-4 text-center">
                               {{ formatTime(lap.lapTimeMS) }}
@@ -417,6 +417,7 @@
               .padStart(2, "0")}:${milliseconds.toString().padStart(3, "0")}`;
           };
 
+          // Compute the time threshold for qualification
           const timeThreshold = computed(() => {
             return registeredPassedParticipants.value.length < SLOTS_NUMBER
               ? INITIAL_MINIMAL_LAP_TIME_LIMIT
@@ -424,7 +425,7 @@
                   .bestAverage;
           });
 
-          // Filter and sort participants for different groups
+          // Filter and sort participants who registered and passed qualification
           const registeredPassedParticipants = computed(() => {
             return sortParticipants(
               participants.value.filter(
@@ -432,15 +433,18 @@
                   p.registered &&
                   p.bestAverage <= INITIAL_MINIMAL_LAP_TIME_LIMIT
               )
-            )
-              .slice(0, 50)
-              .filter((p) => {
-                return selectedCarClass.value
-                  ? p.carClass === selectedCarClass.value
-                  : true;
-              });
+            ).slice(0, 50);
           });
 
+          const registeredPassedParticipantsFilterByClass = computed(() => {
+            return registeredPassedParticipants.value.filter((p) => {
+              return selectedCarClass.value
+                ? p.carClass === selectedCarClass.value
+                : true;
+            });
+          });
+
+          // Filter and sort participants who registered but did not pass qualification
           const registeredNotPassedParticipants = computed(() => {
             return sortParticipants(
               participants.value.filter(
@@ -449,6 +453,7 @@
             );
           });
 
+          // Filter and sort participants who did not register but have lap times
           const notRegisteredWithLapTime = computed(() => {
             return sortParticipants(
               participants.value.filter(
@@ -457,13 +462,13 @@
             );
           });
 
-          // Toggle details
+          // Toggle the details view for a participant
           const toggleDetails = (id) => {
             expandedParticipant.value =
               expandedParticipant.value === id ? null : id;
           };
 
-          // Find participant best 7-lap chain
+          // Find the best 7-lap chain for a participant's attempt
           const findAttemptSuccessfulRange = (attempt, participant) => {
             if (!attempt.laps || attempt.laps.length < 7) {
               return [];
@@ -521,6 +526,17 @@
             ];
           };
 
+          // Check if a lap is valid
+          const isValidLap = (lap) => {
+            return (
+              !lap.inLap &&
+              !lap.outLap &&
+              !lap.hasCut &&
+              !lap.sessionOver &&
+              !lap.hasDamage
+            );
+          };
+
           // Initialize
           onMounted(() => {
             fetchParticipants();
@@ -532,6 +548,7 @@
             activeTab,
             expandedParticipant,
             registeredPassedParticipants,
+            registeredPassedParticipantsFilterByClass,
             registeredNotPassedParticipants,
             notRegisteredWithLapTime,
             formatTime,
@@ -539,6 +556,7 @@
             toggleDetails,
             findAttemptSuccessfulRange,
             getLapClass,
+            isValidLap,
             selectedCarClass,
             timeThreshold,
             CAR_CLASSES,
