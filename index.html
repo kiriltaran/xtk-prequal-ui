@@ -47,7 +47,6 @@
 
       .lap--best-range-start::after {
         border-top-color: var(--success);
-        top: 5px;
       }
 
       .lap--best-range-start.lap--best-range-invalid::after {
@@ -55,7 +54,6 @@
       }
 
       .lap--best-range-finish::after {
-        bottom: 5px;
         border-bottom-color: var(--success);
       }
 
@@ -108,17 +106,37 @@
       <div v-else>
         <!-- Tab Content -->
         <div v-show="activeTab === 'registered-lap-time'" class="mt-4">
+          <div class="mb-4 flex items-center">
+            <label for="carClassFilter" class="mr-2 text-gray-300">
+              Клас авто:
+            </label>
+            <select
+              id="carClassFilter"
+              v-model="selectedCarClass"
+              class="py-2 px-4 bg-gray-800 text-gray-300 border border-gray-600 rounded"
+            >
+              <option value="">Усі</option>
+              <option
+                v-for="carClass in CAR_CLASSES"
+                :key="carClass"
+                :value="carClass"
+              >
+                {{ carClass }}
+              </option>
+            </select>
+          </div>
           <table class="min-w-full table-auto text-gray-300">
             <thead>
               <tr class="bg-gray-800">
-                <th class="py-2 px-4 text-left w-12">#</th>
+                <th class="py-2 px-4 text-left w-12">Позиція</th>
                 <th class="py-2 px-4 text-left">Ім'я</th>
+                <th class="py-2 px-4 text-center">Клас</th>
                 <th class="py-2 px-4 text-center w-60">Кращий середній час</th>
               </tr>
             </thead>
             <tbody>
               <template
-                v-for="(participant, index) in sortedRegisteredLapTime"
+                v-for="(participant, index) in registeredPassedParticipants"
                 :key="participant.id"
               >
                 <tr
@@ -126,7 +144,12 @@
                   @click="toggleDetails(participant.id)"
                 >
                   <td class="py-2 px-4">{{ index + 1 }}</td>
-                  <td class="py-2 px-4">{{ participant.name }}</td>
+                  <td class="py-2 px-4">
+                    {{ participant.name }} (#{{ participant.carNumber }})
+                  </td>
+                  <td class="py-2 px-4 text-center">
+                    {{ participant.carClass }}
+                  </td>
                   <td
                     class="py-2 px-4 text-center"
                     :class="{'text-purple-500' : index === 0}"
@@ -139,7 +162,7 @@
                   v-if="expandedParticipant === participant.id"
                   class="bg-gray-700"
                 >
-                  <td colspan="3" class="py-2 px-4">
+                  <td colspan="4" class="py-2 px-4">
                     <p v-if="participant.attempts.length === 0">
                       Спроби відсутні
                     </p>
@@ -198,11 +221,12 @@
               <tr class="bg-gray-800">
                 <th class="py-2 px-4 text-left w-12">#</th>
                 <th class="py-2 px-4 text-left">Ім'я</th>
+                <th class="py-2 px-4 text-center w-60">Кращий середній час</th>
               </tr>
             </thead>
             <tbody>
               <template
-                v-for="(participant, index) in registeredNoLapTime"
+                v-for="(participant, index) in registeredNotPassedParticipants"
                 :key="participant.id"
               >
                 <tr
@@ -210,13 +234,18 @@
                   @click="toggleDetails(participant.id)"
                 >
                   <td class="py-2 px-4">{{ index + 1 }}</td>
-                  <td class="py-2 px-4">{{ participant.name }}</td>
+                  <td class="py-2 px-4">
+                    {{ participant.name }} (#{{ participant.carNumber }})
+                  </td>
+                  <td class="py-2 px-4 text-center">
+                    {{ formatTime(participant.bestAverage) }}
+                  </td>
                 </tr>
                 <tr
                   v-if="expandedParticipant === participant.id"
                   class="bg-gray-700"
                 >
-                  <td colspan="2" class="py-2 px-4">
+                  <td colspan="3" class="py-2 px-4">
                     <p v-if="participant.attempts.length === 0">
                       Спроби відсутні
                     </p>
@@ -273,7 +302,7 @@
             </thead>
             <tbody>
               <template
-                v-for="(participant, index) in sortedLapTimeNoRegistered"
+                v-for="(participant, index) in notRegisteredWithLapTime"
                 :key="participant.id"
               >
                 <tr
@@ -316,13 +345,13 @@
                             :key="lap.lapTimeMS"
                             :class="getLapClass(lapIndex, attempt, participant)"
                           >
-                            <td class="py-2 px-4">{{ lap.s1 }}</td>
-                            <td class="py-2 px-4">{{ lap.s2 }}</td>
-                            <td class="py-2 px-4">{{ lap.s3 }}</td>
-                            <td class="py-2 px-4">
+                            <td class="py-2 px-4 text-center">{{ lap.s1 }}</td>
+                            <td class="py-2 px-4 text-center">{{ lap.s2 }}</td>
+                            <td class="py-2 px-4 text-center">{{ lap.s3 }}</td>
+                            <td class="py-2 px-4 text-center">
                               {{ lap.hasCute ? 'Так' : 'Ні' }}
                             </td>
-                            <td class="py-2 px-4">
+                            <td class="py-2 px-4 text-center">
                               {{ formatTime(lap.lapTimeMS) }}
                             </td>
                           </tr>
@@ -337,8 +366,8 @@
         </div>
       </div>
 
-      <div class="fixed bottom-10 right-10 bg-blue-700 text-white p-2 rounded">
-        Оновлення сторінки через: {{ countdown }}с
+      <div class="fixed top-10 right-10 bg-green-700 text-white p-2 rounded">
+        Часовий поріг: {{ formatTime(timeThreshold) }}
       </div>
     </div>
 
@@ -347,15 +376,17 @@
 
       const API_URL = "https://acc-prequal-backend.fly.dev/event/list";
       const UNSET_LAP_TIME = 999999;
-      const MINIMAL_LAP_TIME_LIMIT = 126000;
+      const INITIAL_MINIMAL_LAP_TIME_LIMIT = 126000;
+      const SLOTS_NUMBER = 50;
+      const CAR_CLASSES = ["GT3", "M2"];
 
       createApp({
         setup() {
           const participants = ref([]);
           const loading = ref(true);
           const activeTab = ref("registered-lap-time");
-          const countdown = ref(60);
           const expandedParticipant = ref(null);
+          const selectedCarClass = ref("");
 
           // Fetch participants
           const fetchParticipants = async () => {
@@ -386,22 +417,39 @@
               .padStart(2, "0")}:${milliseconds.toString().padStart(3, "0")}`;
           };
 
+          const timeThreshold = computed(() => {
+            return registeredPassedParticipants.value.length < SLOTS_NUMBER
+              ? INITIAL_MINIMAL_LAP_TIME_LIMIT
+              : registeredPassedParticipants.value[SLOTS_NUMBER - 1]
+                  .bestAverage;
+          });
+
           // Filter and sort participants for different groups
-          const sortedRegisteredLapTime = computed(() => {
+          const registeredPassedParticipants = computed(() => {
             return sortParticipants(
               participants.value.filter(
-                (p) => p.registered && p.bestAverage <= MINIMAL_LAP_TIME_LIMIT
+                (p) =>
+                  p.registered &&
+                  p.bestAverage <= INITIAL_MINIMAL_LAP_TIME_LIMIT
+              )
+            )
+              .slice(0, 50)
+              .filter((p) => {
+                return selectedCarClass.value
+                  ? p.carClass === selectedCarClass.value
+                  : true;
+              });
+          });
+
+          const registeredNotPassedParticipants = computed(() => {
+            return sortParticipants(
+              participants.value.filter(
+                (p) => p.registered && p.bestAverage > timeThreshold.value
               )
             );
           });
 
-          const registeredNoLapTime = computed(() => {
-            return participants.value.filter(
-              (p) => p.registered && p.bestAverage > MINIMAL_LAP_TIME_LIMIT
-            );
-          });
-
-          const sortedLapTimeNoRegistered = computed(() => {
+          const notRegisteredWithLapTime = computed(() => {
             return sortParticipants(
               participants.value.filter(
                 (p) => !p.registered && p.bestAverage !== UNSET_LAP_TIME
@@ -442,17 +490,6 @@
             return [bestStartIndex, bestStartIndex + 6];
           };
 
-          // Start countdown and refresh
-          const startCooldown = () => {
-            setInterval(async () => {
-              countdown.value -= 1;
-              if (countdown.value <= 0) {
-                countdown.value = 60;
-                await fetchParticipants();
-              }
-            }, 1000);
-          };
-
           // Calculate dynamic tab class
           const getTabClass = (tab) => {
             return [
@@ -479,7 +516,7 @@
                 "lap--best-range-start": lapIndex === start,
                 "lap--best-range-finish": lapIndex === finish,
                 "lap--best-range-invalid":
-                  isInRange && participant.bestAverage > MINIMAL_LAP_TIME_LIMIT,
+                  isInRange && participant.bestAverage > timeThreshold.value,
               },
             ];
           };
@@ -487,23 +524,24 @@
           // Initialize
           onMounted(() => {
             fetchParticipants();
-            startCooldown();
           });
 
           return {
             participants,
             loading,
             activeTab,
-            countdown,
             expandedParticipant,
-            sortedRegisteredLapTime,
-            registeredNoLapTime,
-            sortedLapTimeNoRegistered,
+            registeredPassedParticipants,
+            registeredNotPassedParticipants,
+            notRegisteredWithLapTime,
             formatTime,
             getTabClass,
             toggleDetails,
             findAttemptSuccessfulRange,
             getLapClass,
+            selectedCarClass,
+            timeThreshold,
+            CAR_CLASSES,
           };
         },
       }).mount("#app");
